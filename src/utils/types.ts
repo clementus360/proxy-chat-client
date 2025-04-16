@@ -18,6 +18,7 @@ export interface UpdateUserData {
 export type ChatType = "user" | "group";
 
 export interface Message {
+    id?: number;
     type: string;
     sender_id: number;
     sender_name: string;

@@ -11,7 +11,7 @@ import { NewMessage } from '@/utils/types'
 
 
 export default function Page() {
-    const [messages, setMessages] = useState<any[]>([])
+    const [messages, setMessages] = useState(() => [] as NewMessage[])
     const { registerMessageCallback } = useSocket()
     const [chatText, setChatText] = useState<string>('')
     const { currentChat } = useChat()
@@ -50,7 +50,7 @@ export default function Page() {
     useEffect(() => {
         // set messages as read
         messages.forEach((message) => {
-            console.log("Marking message as read:", message.id)
+            if (!message.id) return
             markMessageAsRead(message.id)
             console.log("Message:", message.id, "marked as read")
         })
