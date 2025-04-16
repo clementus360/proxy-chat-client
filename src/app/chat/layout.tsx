@@ -1,6 +1,5 @@
 import { LocationUpdater } from "@/components";
 import { SocketProvider } from "@/context/SocketContext";
-import { useUser } from "@/context/UserContext";
 
 export default function ChatLayout({
     children,

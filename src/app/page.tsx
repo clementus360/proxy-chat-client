@@ -1,12 +1,8 @@
 "use client"
 
-import Image from "next/image";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, GroupIcon, UserIcon } from "@/components";
-import { SettingIcon } from "@/components/Icons/Setting";
-import { PlusIcon } from "@/components/Icons/PlusIcon";
 
 export default function Home() {
   const { user, isActive, isLoggedIn } = useUser();

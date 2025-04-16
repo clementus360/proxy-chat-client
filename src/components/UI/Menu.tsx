@@ -11,10 +11,10 @@ interface NavItem {
     link: string;
 }
 
-const navItems: NavItem[] = [
-    { title: "Users", link: "/chat/users" },
-    { title: "Groups", link: "/chat/groups" },
-];
+// const navItems: NavItem[] = [
+//     { title: "Users", link: "/chat/users" },
+//     { title: "Groups", link: "/chat/groups" },
+// ];
 
 export function Menu() {
     const pathname = usePathname();

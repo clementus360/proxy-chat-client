@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useUser } from "@/context/UserContext";
-import { Button, Menu, Toggle, UsersDisplay, UserSettingsModal } from "@/components";
+import { Button, Toggle, UsersDisplay, UserSettingsModal } from "@/components";
 import { SettingIcon } from "@/components/Icons/Setting";
 import { UpdateUser } from "@/utils/api";
 import { useEffect, useState } from "react";

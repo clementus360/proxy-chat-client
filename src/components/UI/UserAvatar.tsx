@@ -1,7 +1,7 @@
 "use client";
 import { useSocket } from "@/context/SocketContext";
-import { debugMessages, getUnreadCount } from "@/utils/db";
-import { Message, NewMessage } from "@/utils/types";
+import { getUnreadCount } from "@/utils/db";
+import { NewMessage } from "@/utils/types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";

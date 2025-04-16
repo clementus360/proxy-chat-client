@@ -39,6 +39,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
             });
 
             console.log("User visibility updated:", updatedUser);
+            console.log(loading)
             toggleVisibility(); // Update context after success
         } catch (error) {
             console.error("Failed to update user visibility:", error);

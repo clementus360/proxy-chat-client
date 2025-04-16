@@ -1,6 +1,6 @@
 interface TextInputProps {
     name: string;
-    label: string;
+    label?: string;
     type: string;
     placeholder: string;
     value: string;
@@ -8,7 +8,7 @@ interface TextInputProps {
     errorMessage?: string;
 }
 
-export const TextInput: React.FC<TextInputProps> = ({ name, value, label, type, placeholder, onChange, errorMessage }) => {
+export const TextInput: React.FC<TextInputProps> = ({ name, value, type, placeholder, onChange, errorMessage }) => {
     return (
         <div className="flex flex-col gap-2 w-full">
             {/* {label && <label htmlFor={label} className="text-primary">{label}</label>} */}

@@ -4,9 +4,6 @@ import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import { Suspense } from "react";
 import { ChatProvider } from "@/context/ChatContext";
-import { Socket } from "dgram";
-import { SocketProvider } from "@/context/SocketContext";
-import { LocationUpdater } from "@/components";
 
 const inter = Inter({
   subsets: ["latin"],
