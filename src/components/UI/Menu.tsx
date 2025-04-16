@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/utils/cn';
 import Link from 'next/link';
 
-interface NavItem {
-    title: string;
-    link: string;
-}
+// interface NavItem {
+//     title: string;
+//     link: string;
+// }
 
 // const navItems: NavItem[] = [
 //     { title: "Users", link: "/chat/users" },

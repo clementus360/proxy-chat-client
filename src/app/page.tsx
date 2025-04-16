@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-  const { user, isActive, isLoggedIn } = useUser();
+  const { isLoggedIn } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
