@@ -61,7 +61,7 @@ export default function Page() {
                     longitude: createdUser.longitude,
                     created_at: createdUser.created_at,
                     last_active: createdUser.last_active,
-                    visible: createdUser.visible,
+                    visible: false,
                 });
 
                 router.push("/chat/users");
