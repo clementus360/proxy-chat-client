@@ -54,7 +54,7 @@ export default function Page() {
             markMessageAsRead(message.id)
             console.log("Message:", message.id, "marked as read")
         })
-    }, [messages])
+    }, [messages, registerMessageCallback])
 
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
