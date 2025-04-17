@@ -63,19 +63,19 @@ export function UsersDisplay() {
 
     return (
         <div className="w-full min-h-[32rem] rounded-lg p-4 flex flex-wrap justify-center items-center gap-8">
-            {loading && users.length === 0 ? (
+            {loading && users?.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-white/50">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-400 mb-4"></div>
                     <p className="text-sm md:text-base">Looking for nearby users...</p>
                 </div>
-            ) : users.length === 0 ? (
+            ) : users?.length === 0 ? (
                 <div className="text-center text-white/40 p-8">
                     <p className="text-lg font-semibold mb-2">No users found nearby</p>
                     <p className="text-sm md:text-base">Try again in a few moments</p>
                 </div>
             ) : (
                 <>
-                    {users.map((user) => (
+                    {users?.map((user) => (
                         <div
                             key={user.id}
                             className="transition-transform hover:scale-105 duration-200"

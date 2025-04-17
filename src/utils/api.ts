@@ -2,7 +2,7 @@ import axios from "axios";
 import { UpdateUserData, UserData } from "./types";
 
 const API = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api`,
     headers: {
         "Content-Type": "application/json",
         Accept: "application/json",

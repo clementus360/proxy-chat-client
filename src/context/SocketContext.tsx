@@ -1,6 +1,6 @@
 "use client"
 import { addMessage } from "@/utils/db";
-import { Message, NewMessage } from "@/utils/types";
+import { NewMessage } from "@/utils/types";
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
 interface SocketContextType {
@@ -50,7 +50,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      const newSocket = new WebSocket(`ws://localhost:8080/ws?user_id=${user?.id}`);
+      const newSocket = new WebSocket(`${process.env.NEXT_PUBLIC_API_URL}/ws?user_id=${user?.id}`);
       
       newSocket.onopen = () => {
         console.log("Socket Context: WebSocket connected");
@@ -64,7 +64,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       };
       
       newSocket.onmessage = (event) => {
-        const data: Message = JSON.parse(event.data);
+        const data: NewMessage = JSON.parse(event.data);
         console.log("Socket Context: WebSocket message received", data);
         
         // Add message to DB first
