@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react";
 import { Logo, TextInput, Button, LocationIcon } from "@/components";
-import { getUserLocation } from "@/utils/geolocation";
+import { getBestPossibleLocation } from "@/utils/geolocation";
 import { UserData } from "@/utils/types";
 import { generateAvatarUrl } from "@/utils/userAvatar";
 import { CreateUser } from "@/utils/api";
@@ -36,7 +36,7 @@ export default function Page() {
         e.preventDefault();
 
         try {
-            const location = await getUserLocation()
+            const location = await getBestPossibleLocation()
 
             if (location) {
                 const userData: UserData = {
