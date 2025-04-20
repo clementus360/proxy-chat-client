@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { GetUsers } from "@/utils/api";
 import UserAvatar from "./UserAvatar";
 import { useUser } from "@/context/UserContext";
@@ -8,90 +8,245 @@ import { useChat } from "@/context/ChatContext";
 
 // Define user type based on the API response
 interface User {
-    id: number;
-    username: string;
-    image_url: string;
-    visible: boolean;
-    online: boolean;
-    last_active: string;
-    created_at: string;
+  id: number;
+  username: string;
+  image_url: string;
+  visible: boolean;
+  online: boolean;
+  last_active: string;
+  created_at: string;
+}
+
+// Separate interface for positioned users
+interface PositionedUser extends User {
+  posX: number;
+  posY: number;
 }
 
 export function UsersDisplay() {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { user } = useUser();
-    const { setChat } = useChat();
-    const router = useRouter();
+  const [positionedUsers, setPositionedUsers] = useState<PositionedUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const { setChat } = useChat();
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Store user position map in ref to avoid dependency issues
+  const userPositionsRef = useRef<Record<number, {posX: number, posY: number}>>({});
 
-    const fetchUsers = async () => {
-        if (!user?.latitude || !user?.longitude || !user.id) {
-            console.error("User data not found");
-            return;
+  // Function to position a new user without overlap
+  const positionNewUser = useCallback((newUser: User, existingUsers: PositionedUser[], width: number, height: number): PositionedUser => {
+    const avatarSize = 100; // Size of avatar + some padding
+    const minDistance = avatarSize; // Minimum distance between avatars
+    
+    // Border padding to keep avatars fully in view
+    const padding = 50;
+    const safeWidth = width - padding * 2;
+    const safeHeight = height - padding * 2;
+    
+    let attempts = 0;
+    let posX = 0;
+    let posY = 0;
+    let validPosition = false;
+    
+    // Try to find a non-overlapping position
+    while (!validPosition && attempts < 100) {
+      // Random position with padding
+      posX = padding + Math.random() * safeWidth;
+      posY = padding + Math.random() * safeHeight;
+      
+      // Check against existing positioned users
+      validPosition = true;
+      for (const positioned of existingUsers) {
+        const dx = posX - positioned.posX;
+        const dy = posY - positioned.posY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < minDistance) {
+          validPosition = false;
+          break;
         }
+      }
+      
+      attempts++;
+    }
+    
+    return { ...newUser, posX, posY };
+  }, []);
 
-        try {
-            setLoading(true);
-            const usersData: User[] = await GetUsers(user.latitude, user.longitude, 5, user.id);
-            setUsers(usersData);
-        } catch (error) {
-            console.error("Failed to fetch users:", error);
-        } finally {
-            setLoading(false);
+  const fetchUsers = useCallback(async () => {
+    if (!user?.latitude || !user?.longitude || !user.id) {
+      console.error("User data not found");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const fetchedUsers: User[] = await GetUsers(user.latitude, user.longitude, 5, user.id);
+      
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const containerHeight = containerRef.current.clientHeight;
+        
+        // Create updated user list
+        const updatedPositionedUsers: PositionedUser[] = [];
+        
+        // Process each fetched user
+        for (const fetchedUser of fetchedUsers) {
+          // Check if we already have a position for this user
+          if (userPositionsRef.current[fetchedUser.id]) {
+            // Use existing position
+            updatedPositionedUsers.push({
+              ...fetchedUser,
+              posX: userPositionsRef.current[fetchedUser.id].posX,
+              posY: userPositionsRef.current[fetchedUser.id].posY
+            });
+          } else {
+            // This is a new user, calculate position
+            const newPositionedUser = positionNewUser(
+              fetchedUser, 
+              updatedPositionedUsers,
+              containerWidth, 
+              containerHeight
+            );
+            
+            // Save position for future reference
+            userPositionsRef.current[fetchedUser.id] = {
+              posX: newPositionedUser.posX,
+              posY: newPositionedUser.posY
+            };
+            
+            updatedPositionedUsers.push(newPositionedUser);
+          }
         }
+        
+        setPositionedUsers(updatedPositionedUsers);
+      }
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.latitude, user?.longitude, positionNewUser]);
+
+  useEffect(() => {
+    fetchUsers();
+    const interval = setInterval(fetchUsers, 5000); // Refresh every 5 seconds
+    
+    return () => {
+      clearInterval(interval);
     };
+  }, [fetchUsers]);
 
-    useEffect(() => {
-        fetchUsers();
-        const interval = setInterval(fetchUsers, 5000); // Refresh every 5 seconds
-        return () => clearInterval(interval);
-    }, [user?.id]);
-
-    const openChat = (user: User) => {
-        console.log("Opening chat with user:", user);
-        setChat({
-            id: user.id.toString(),
-            username: user.username,
-            image_url: user.image_url,
-            online: user.online,
-            visible: user.visible,
-            last_active: user.last_active,
-            created_at: user.created_at,
-        });
-        router.push(`/chat/users/${user.id}`);
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current && positionedUsers.length > 0) {
+        const containerWidth = containerRef.current.clientWidth;
+        const containerHeight = containerRef.current.clientHeight;
+        
+        // Reset positions for all users
+        userPositionsRef.current = {};
+        
+        // Reposition all users
+        const repositionedUsers: PositionedUser[] = [];
+        
+        for (const user of positionedUsers) {
+          const repositioned = positionNewUser(
+            user,
+            repositionedUsers,
+            containerWidth,
+            containerHeight
+          );
+          
+          // Save new position
+          userPositionsRef.current[user.id] = {
+            posX: repositioned.posX,
+            posY: repositioned.posY
+          };
+          
+          repositionedUsers.push(repositioned);
+        }
+        
+        setPositionedUsers(repositionedUsers);
+      }
     };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [positionNewUser, positionedUsers]);
 
-    return (
-        <div className="w-full min-h-[32rem] rounded-lg p-4 flex flex-wrap justify-center items-center gap-8">
-            {loading && users?.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-white/50">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-400 mb-4"></div>
-                    <p className="text-sm md:text-base">Looking for nearby users...</p>
-                </div>
-            ) : users?.length === 0 ? (
-                <div className="text-center text-white/40 p-8">
-                    <p className="text-lg font-semibold mb-2">No users found nearby</p>
-                    <p className="text-sm md:text-base">Try again in a few moments</p>
-                </div>
-            ) : (
-                <>
-                    {users?.map((user) => (
-                        <div
-                            key={user.id}
-                            className="transition-transform hover:scale-105 duration-200"
-                        >
-                            <button
-                                onClick={() => openChat(user)}
-                                className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28"
-                                aria-label={`Chat with ${user.username}`}
-                            >
-                                <UserAvatar user={user} />
-                            </button>
-                        </div>
-                    ))}
-                    
-                </>
-            )}
+  const openChat = (user: PositionedUser) => {
+    console.log("Opening chat with user:", user);
+    setChat({
+      id: user.id.toString(),
+      username: user.username,
+      image_url: user.image_url,
+      online: user.online,
+      visible: user.visible,
+      last_active: user.last_active,
+      created_at: user.created_at,
+    });
+    router.push(`/chat/users/${user.id}`);
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      className="w-full min-h-[32rem] relative bg-slate-800/40 rounded-lg p-4 overflow-hidden"
+    >
+      {/* Radar pulse animation */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full flex items-center justify-center">
+        <div className="w-40 h-40 rounded-full bg-indigo-500/5 animate-ping"></div>
+        <div className="absolute w-64 h-64 rounded-full bg-indigo-500/5 animate-ping" style={{ animationDelay: "0.5s" }}></div>
+        <div className="absolute w-96 h-96 rounded-full bg-indigo-500/5 animate-ping" style={{ animationDelay: "1s" }}></div>
+      </div>
+      
+      {loading && positionedUsers.length === 0 ? (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-white/50 z-10">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-400 mb-4"></div>
+          <p className="text-sm md:text-base">Scanning for nearby users...</p>
         </div>
-    );
+      ) : positionedUsers.length === 0 ? (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center text-white/40 p-8 z-10">
+          <p className="text-lg font-semibold mb-2">No users found nearby</p>
+          <p className="text-sm md:text-base">Try again in a few moments</p>
+        </div>
+      ) : (
+        <>
+          {positionedUsers.map((user) => (
+            <div
+              key={user.id}
+              className="absolute transition-all duration-500 hover:scale-110 z-20"
+              style={{ 
+                left: `${user.posX}px`, 
+                top: `${user.posY}px`,
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              <button
+                onClick={() => openChat(user)}
+                className="relative"
+                aria-label={`Chat with ${user.username}`}
+              >
+                <div className="bg-indigo-500/20 p-1 rounded-full">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden">
+                    <UserAvatar user={user} />
+                  </div>
+                </div>
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-800/80 px-2 py-1 rounded-md whitespace-nowrap">
+                  <p className="text-xs text-white/90">{user.username}</p>
+                </div>
+                {user.online && (
+                  <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>  
+                )}
+              </button>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
 }
