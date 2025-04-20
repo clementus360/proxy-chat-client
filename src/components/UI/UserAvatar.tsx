@@ -101,7 +101,7 @@ export default function UserAvatar({ user }: { user: User }) {
   };
 
   return (
-    <div onClick={handleClick} className="relative h-auto cursor-pointer group">
+    <div onClick={handleClick} className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 cursor-pointer group">
       {/* Avatar image with hover effects */}
       <div className="relative rounded-full p-1 transition-all duration-300 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 group-hover:shadow-lg group-hover:scale-105">
         <Image
