@@ -26,13 +26,27 @@ interface PositionedUser extends User {
 export function UsersDisplay() {
     const [positionedUsers, setPositionedUsers] = useState<PositionedUser[]>([]);
     const [loading, setLoading] = useState(true);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const { user } = useUser();
     const { setChat } = useChat();
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
+    const hasMeasuredContainer = useRef(false);
 
     // Store user position map in ref to avoid dependency issues
     const userPositionsRef = useRef<Record<number, { posX: number, posY: number }>>({});
+
+    // Initial container measurement - only done once
+    useEffect(() => {
+        if (containerRef.current && !hasMeasuredContainer.current) {
+            // Get the initial size
+            const width = containerRef.current.offsetWidth;
+            const height = Math.max(containerRef.current.offsetHeight, 500); // Minimum height
+
+            setContainerSize({ width, height });
+            hasMeasuredContainer.current = true;
+        }
+    }, []);
 
     // Function to position a new user without overlap
     const positionNewUser = useCallback((newUser: User, existingUsers: PositionedUser[], width: number, height: number): PositionedUser => {
@@ -41,8 +55,8 @@ export function UsersDisplay() {
 
         // Border padding to keep avatars fully in view
         const padding = 50;
-        const safeWidth = width - padding * 2;
-        const safeHeight = height - padding * 2;
+        const safeWidth = Math.max(width - padding * 2, 300);
+        const safeHeight = Math.max(height - padding * 2, 300);
 
         let attempts = 0;
         let posX = 0;
@@ -51,9 +65,13 @@ export function UsersDisplay() {
 
         // Try to find a non-overlapping position
         while (!validPosition && attempts < 100) {
-            // Random position with padding
-            posX = padding + Math.random() * safeWidth;
-            posY = padding + Math.random() * safeHeight;
+            // Random position with padding - use percentage of container size
+            // This way positions are relative and will scale better
+            const relativeX = padding + Math.random() * safeWidth;
+            const relativeY = padding + Math.random() * safeHeight;
+
+            posX = relativeX;
+            posY = relativeY;
 
             // Check against existing positioned users
             validPosition = true;
@@ -75,8 +93,7 @@ export function UsersDisplay() {
     }, []);
 
     const fetchUsers = useCallback(async () => {
-        if (!user?.latitude || !user?.longitude || !user.id) {
-            console.error("User data not found");
+        if (!user?.latitude || !user?.longitude || !user.id || containerSize.width <= 0) {
             return;
         }
 
@@ -84,99 +101,56 @@ export function UsersDisplay() {
             setLoading(true);
             const fetchedUsers: User[] = await GetUsers(user.latitude, user.longitude, 5, user.id);
 
-            if (containerRef.current) {
-                const containerWidth = containerRef.current.clientWidth;
-                const containerHeight = containerRef.current.clientHeight;
+            // Create updated user list
+            const updatedPositionedUsers: PositionedUser[] = [];
 
-                // Create updated user list
-                const updatedPositionedUsers: PositionedUser[] = [];
+            // Process each fetched user
+            for (const fetchedUser of fetchedUsers) {
+                // Check if we already have a position for this user
+                if (userPositionsRef.current[fetchedUser.id]) {
+                    // Use existing position
+                    updatedPositionedUsers.push({
+                        ...fetchedUser,
+                        posX: userPositionsRef.current[fetchedUser.id].posX,
+                        posY: userPositionsRef.current[fetchedUser.id].posY
+                    });
+                } else {
+                    // This is a new user, calculate position
+                    const newPositionedUser = positionNewUser(
+                        fetchedUser,
+                        updatedPositionedUsers,
+                        containerSize.width,
+                        containerSize.height
+                    );
 
-                // Process each fetched user
-                for (const fetchedUser of fetchedUsers) {
-                    // Check if we already have a position for this user
-                    if (userPositionsRef.current[fetchedUser.id]) {
-                        // Use existing position
-                        updatedPositionedUsers.push({
-                            ...fetchedUser,
-                            posX: userPositionsRef.current[fetchedUser.id].posX,
-                            posY: userPositionsRef.current[fetchedUser.id].posY
-                        });
-                    } else {
-                        // This is a new user, calculate position
-                        const newPositionedUser = positionNewUser(
-                            fetchedUser,
-                            updatedPositionedUsers,
-                            containerWidth,
-                            containerHeight
-                        );
+                    // Save position for future reference
+                    userPositionsRef.current[fetchedUser.id] = {
+                        posX: newPositionedUser.posX,
+                        posY: newPositionedUser.posY
+                    };
 
-                        // Save position for future reference
-                        userPositionsRef.current[fetchedUser.id] = {
-                            posX: newPositionedUser.posX,
-                            posY: newPositionedUser.posY
-                        };
-
-                        updatedPositionedUsers.push(newPositionedUser);
-                    }
+                    updatedPositionedUsers.push(newPositionedUser);
                 }
-
-                setPositionedUsers(updatedPositionedUsers);
             }
+
+            setPositionedUsers(updatedPositionedUsers);
         } catch (error) {
             console.error("Failed to fetch users:", error);
         } finally {
             setLoading(false);
         }
-    }, [user?.id, user?.latitude, user?.longitude, positionNewUser]);
+    }, [user?.id, user?.latitude, user?.longitude, positionNewUser, containerSize]);
 
     useEffect(() => {
-        fetchUsers();
-        const interval = setInterval(fetchUsers, 5000); // Refresh every 5 seconds
+        if (containerSize.width > 0) {
+            fetchUsers();
+            const interval = setInterval(fetchUsers, 5000); // Refresh every 5 seconds
 
-        return () => {
-            clearInterval(interval);
-        };
-    }, [fetchUsers]);
-
-    // Handle window resize
-    useEffect(() => {
-        const handleResize = () => {
-            if (containerRef.current && positionedUsers.length > 0) {
-                const containerWidth = containerRef.current.clientWidth;
-                const containerHeight = containerRef.current.clientHeight;
-
-                // Reset positions for all users
-                userPositionsRef.current = {};
-
-                // Reposition all users
-                const repositionedUsers: PositionedUser[] = [];
-
-                for (const user of positionedUsers) {
-                    const repositioned = positionNewUser(
-                        user,
-                        repositionedUsers,
-                        containerWidth,
-                        containerHeight
-                    );
-
-                    // Save new position
-                    userPositionsRef.current[user.id] = {
-                        posX: repositioned.posX,
-                        posY: repositioned.posY
-                    };
-
-                    repositionedUsers.push(repositioned);
-                }
-
-                setPositionedUsers(repositionedUsers);
-            }
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, [positionNewUser, positionedUsers]);
+            return () => {
+                clearInterval(interval);
+            };
+        }
+    }, [fetchUsers, containerSize]);
 
     const openChat = (user: PositionedUser) => {
         console.log("Opening chat with user:", user);

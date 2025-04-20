@@ -129,7 +129,7 @@ export default function UserAvatar({ user }: { user: User }) {
       )}
 
       {/* Username tooltip that appears on hover with slide-up animation */}
-      <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 translate-y-2 group-hover:translate-y-0 bg-gray-800 text-white text-xs py-1 px-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg">
+      <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 md:translate-y-2 group-hover:translate-y-0 bg-gray-800 text-white text-xs py-1 px-3 rounded-full md:opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg">
         {user.username}
       </span>
 
