@@ -5,7 +5,7 @@ import haversineDistance from "@/utils/haversineDistance";
 import { useUser } from "@/context/UserContext";
 import { getBestPossibleLocation } from "@/utils/geolocation";
 
-const LOCATION_UPDATE_THRESHOLD_METERS = 20;
+const LOCATION_UPDATE_THRESHOLD_METERS = 5;
 const FALLBACK_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 export function LocationUpdater() {
